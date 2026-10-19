@@ -120,7 +120,7 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
     if not ratings_only:
         for key in tags.keys():
             if (tags[key] > threshold):
-                clipped_tags.append(key.replace("_", " ") if key not in kaomojis else key)
+                clipped_tags.append(key)
 
     if not privacy:
         click.echo("rating: " + rating)
@@ -205,7 +205,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             if not ratings_only:
                 for key in tags.keys():
                     if tags[key] > threshold:
-                        clipped_tags.append(key.replace("_", " ") if key not in kaomojis else key)
+                        clipped_tags.append(key)
 
             if not privacy:
                 click.echo("rating: " + rating)
