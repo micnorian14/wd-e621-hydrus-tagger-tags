@@ -137,7 +137,7 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
 
 
 @click.command()
-@click.argument("hashfile")
+@click.argument("inputfile")
 @click.option("--token", help="The API token for your Hydrus server")
 @click.option("--cpu", default=False, help="Use CPU instead of GPU")
 @click.option("--model", default="wd-v1-4-vit-tagger-v2", help="The tagging model to use")
@@ -146,9 +146,10 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
 @click.option("--tag-service", default="A.I. Tags", help="The Hydrus tag service to add tags to")
 @click.option("--ratings-only", default=False, help="Strip all tags except for content rating")
 @click.option("--privacy", default=True, help="hides the tag output from the cli")
-def evaluate_api_batch(hashfile, token, cpu, model, threshold, host, tag_service, ratings_only, privacy):
-    if not os.path.isfile(hashfile):
-        raise ValueError("hashfile not found!")
+@click.option("--tags", is_flag=True, help="Treat inputfile as a list of Hydrus search tags instead of hashes")
+def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_service, ratings_only, privacy, tags):
+    if not os.path.isfile(inputfile):
+        raise ValueError("input file not found!")
     if not os.path.isfile('./model/' + model + '/info.json'):
         raise ValueError("info.json not found in model folder!")
 
@@ -159,28 +160,43 @@ def evaluate_api_batch(hashfile, token, cpu, model, threshold, host, tag_service
         raise ValueError("--ratings-only set, but model does not support ratings!")
 
     integerator = interrogate.WaifuDiffusionInterrogator(
-        modelinfo['modelname'], # the name of the model for display purposes
-        modelinfo['modelfile'], # the filename of the model file
-        modelinfo['tagsfile'], # the filename of the tags file
-        model, # the folder storing the previous two files as well as the info file
-		modelinfo['ratingsflag'], # flag indicating whether model identifies content rating
-		modelinfo['numberofratings'], # amount of tags to consider for content rating if so
-        repo_id=modelinfo['source'], # source of the model, credit where credit is due
+        modelinfo['modelname'],
+        modelinfo['modelfile'],
+        modelinfo['tagsfile'],
+        model,
+        modelinfo['ratingsflag'],
+        modelinfo['numberofratings'],
+        repo_id=modelinfo['source'],
     )
     integerator.load(cpu)
     client = hydrus_api.Client(token, host)
-    with open(hashfile) as hashfile_f:
-        hashes = hashfile_f.readlines()
+
+    if tags:
+        # Read tags from the file and search Hydrus for matching hashes
+        with open(inputfile) as f:
+            search_tags = [line.strip() for line in f if line.strip()]
+        click.echo(f"Searching Hydrus for tags: {search_tags}")
+        result = client.search_files(tags=search_tags, return_hashes=True)
+        # result is either a dict with "hashes" or a plain list of hashes
+        if isinstance(result, dict):
+            hashes = result.get("hashes", [])
+        else:
+            hashes = result  # already a list of hash strings
+        click.echo(f"Found {len(hashes)} files")
+    else:
+        # Original behavior: read hashes directly
+        with open(inputfile) as hashfile_f:
+            hashes = [line.strip() for line in hashfile_f if line.strip()]
 
     with click.progressbar(hashes) as bar:
         for hash in bar:
-            click.echo(" processing: "+ hash)
+            click.echo(" processing: " + hash)
             image_bytes = BytesIO(client.get_file(hash).content)
             image = Image.open(image_bytes)
             ratings, tags = integerator.interrogate(image)
             rating = "none"
-            if modelinfo['ratingsflag']: 
-                ratings["none"] = 0.0 # assign none a value of zero so that rating comparison can still occur
+            if modelinfo['ratingsflag']:
+                ratings["none"] = 0.0
                 for key in ratings.keys():
                     if ratings[key] > ratings[rating]:
                         rating = key
@@ -188,7 +204,7 @@ def evaluate_api_batch(hashfile, token, cpu, model, threshold, host, tag_service
 
             if not ratings_only:
                 for key in tags.keys():
-                    if (tags[key] > threshold):
+                    if tags[key] > threshold:
                         clipped_tags.append(key.replace("_", " ") if key not in kaomojis else key)
 
             if not privacy:
@@ -196,9 +212,10 @@ def evaluate_api_batch(hashfile, token, cpu, model, threshold, host, tag_service
                 click.echo("tags: " + ", ".join(clipped_tags))
                 click.echo()
 
-            if modelinfo['ratingsflag']: clipped_tags.append("rating:" + rating)
+            if modelinfo['ratingsflag']:
+                clipped_tags.append("rating:" + rating)
             if ratings_only:
-                clipped_tags.append("ratings only " + modelinfo['modelname'] + " ai generated tags") # create tag specifying that content tags were excluded
+                clipped_tags.append("ratings only " + modelinfo['modelname'] + " ai generated tags")
             else:
                 clipped_tags.append(modelinfo['modelname'] + " ai generated tags")
 
