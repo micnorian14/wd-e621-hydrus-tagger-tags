@@ -193,6 +193,17 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             click.echo(" processing: " + hash)
             try:
                 image_bytes = BytesIO(client.get_file(hash).content)
+                # Quick metadata check to skip known bad formats
+                metadata = client.get_file_metadata(hashes=[hash])
+                if isinstance(metadata, dict) and "metadata" in metadata:
+                    file_meta = metadata["metadata"][0] if metadata["metadata"] else None
+                else:
+                    file_meta = metadata[0] if metadata else None
+                ext = file_meta.get("ext", "").lower() if file_meta else ""
+                if ext in (".swf", ".fla", ".flash"):
+                    click.echo(f" skipping unsupported format {ext}: {hash}")
+                    continue
+
                 image = Image.open(image_bytes)
                 ratings, tags = integerator.interrogate(image)
             except Exception as e:
