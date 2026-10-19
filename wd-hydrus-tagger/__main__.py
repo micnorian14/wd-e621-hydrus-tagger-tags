@@ -191,9 +191,13 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
     with click.progressbar(hashes) as bar:
         for hash in bar:
             click.echo(" processing: " + hash)
-            image_bytes = BytesIO(client.get_file(hash).content)
-            image = Image.open(image_bytes)
-            ratings, tags = integerator.interrogate(image)
+            try:
+                image_bytes = BytesIO(client.get_file(hash).content)
+                image = Image.open(image_bytes)
+                ratings, tags = integerator.interrogate(image)
+            except Exception as e:
+                click.echo(f" skipping unsupported file {hash}: {e}")
+                continue
             rating = "none"
             if modelinfo['ratingsflag']:
                 ratings["none"] = 0.0 # assign none a value of zero so that rating comparison can still occur
