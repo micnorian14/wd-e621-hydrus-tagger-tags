@@ -108,6 +108,15 @@ To enable GPU use for *wd-v3* SmilingWolf models, such as [wd-eva02-large-tagger
 3. Run wd.bat from command line OR if doing specifically furry art, run e621.bat
 4. (optional) If you need or want to, you can run ratings.bat to only get ratings tags, no content tags
 
+## Processing by Tags (Optional)
+Alternatively, you can process files by Hydrus search tags instead of manually exporting hashes.
+1. Create a `tags.txt` file containing Hydrus search tags (one per line).
+2. Run the tool with the `--tags` flag and point it at `tags.txt` instead of `hashes.txt`.
+3. The tool will query Hydrus for all matching files and process them.
+	- Tags are ANDed together (a file must match all of them). System predicates such as `system:filetype is image` or `system:limit=500` work the same way they do in the Hydrus client. The original hashes.txt workflow still works if you omit the `--tags` flag.
+	- Example `tags.txt`:
+		creator:some_artist
+		system:filetype is image
 
 ## Running in CLI
 ### Evaluate a file
