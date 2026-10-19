@@ -160,13 +160,13 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
         raise ValueError("--ratings-only set, but model does not support ratings!")
 
     integerator = interrogate.WaifuDiffusionInterrogator(
-        modelinfo['modelname'],
-        modelinfo['modelfile'],
-        modelinfo['tagsfile'],
-        model,
-        modelinfo['ratingsflag'],
-        modelinfo['numberofratings'],
-        repo_id=modelinfo['source'],
+        modelinfo['modelname'], # the name of the model for display purposes
+        modelinfo['modelfile'], # the filename of the model file
+        modelinfo['tagsfile'], # the filename of the tags file
+        model,  # the folder storing the previous two files as well as the info file
+        modelinfo['ratingsflag'], # flag indicating whether model identifies content rating
+        modelinfo['numberofratings'], # amount of tags to consider for content rating if so
+        repo_id=modelinfo['source'], # source of the model, credit where credit is due
     )
     integerator.load(cpu)
     client = hydrus_api.Client(token, host)
@@ -196,7 +196,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             ratings, tags = integerator.interrogate(image)
             rating = "none"
             if modelinfo['ratingsflag']:
-                ratings["none"] = 0.0
+                ratings["none"] = 0.0 # assign none a value of zero so that rating comparison can still occur
                 for key in ratings.keys():
                     if ratings[key] > ratings[rating]:
                         rating = key
@@ -215,7 +215,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             if modelinfo['ratingsflag']:
                 clipped_tags.append("rating:" + rating)
             if ratings_only:
-                clipped_tags.append("ratings only " + modelinfo['modelname'] + " ai generated tags")
+                clipped_tags.append("ratings only " + modelinfo['modelname'] + " ai generated tags") # create tag specifying that content tags were excluded
             else:
                 clipped_tags.append(modelinfo['modelname'] + " ai generated tags")
 
