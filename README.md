@@ -45,20 +45,16 @@ to do so:
 6. Click "Go!" and wait for it to finish
 7. Repeat steps 2 through 6, but under content select "tag siblings"
 
+## CONFIGURATION:
+Edit config.yaml. At minimum set your Hydrus API `token`.
+All other settings (host, model, threshold, tag_service, cpu, ratings_only, privacy) are optional and have sensible defaults.
+CLI flags always override values from the config file.
+
 ## .BAT FILE PREPARATIONS:
-There are 4 .bat files, start.bat, e621.bat, wd.bat, and ratings.bat. start.bat should not be edited.
-1. Open wd.bat in a text editor
-2. Replace "REPLACE_WITH_API_KEY" with your the key to the api you made previously
-   - If you dont have your API key:
-	- a. Go to hydrus
-	- b. Navigate to services > review services
-	- c. Navigate to local > client api
-	- d. Click your AI tagging API from the list
-	- e. Click "copy api access key"
-	- f. now paste the access key from your clipboard to the .bat file
-3. (optional) If necessary, replace "A.I. Tags" with the name of your tag service (keep the quotes)
-4. Save your changes
-5. Repeat steps 2 through 4 with e621.bat and ratings.bat
+There are 4 .bat files, `start.bat`, `e621.bat`, `wd.bat`, and `ratings.bat`. `start.bat` should not be edited.
+The .bat files no longer contain your API token — that is in config.yaml now.
+You can still override model, tags mode, etc. directly in the .bat files if you want different defaults per script.
+The premade .bat files currently point at the wd-eva02-large-tagger-v3 model. You still need to download the model files into the corresponding folder; the .bat files only select which model to use.
 
 # Now you should be prepared and ready to start automatically tagging files. 
 I recommend starting with a single file or a small group of files, and testing wd.bat, e621.bat, and ratings.bat individually. Make sure the tags are being put into your AI tagging service, that tag siblings/parents are displaying correctly, and that the file is properly tagged as being AI tagged. If all is well, you can proceed to mass tagging.
@@ -108,7 +104,7 @@ To enable GPU use for *wd-v3* SmilingWolf models, such as [wd-eva02-large-tagger
 3. Run wd.bat from command line OR if doing specifically furry art, run e621.bat
 4. (optional) If you need or want to, you can run ratings.bat to only get ratings tags, no content tags
 
-## Processing by Tags (Optional)
+### Processing by Tags (`--tags`)
 Alternatively, you can process files by Hydrus search tags instead of manually exporting hashes.
 1. Create a `tags.txt` file containing Hydrus search tags (one per line).
 2. Run the tool with the `--tags` flag and point it at `tags.txt` instead of `hashes.txt`.
@@ -117,6 +113,25 @@ Alternatively, you can process files by Hydrus search tags instead of manually e
 	- Example `tags.txt`:
 		creator:some_artist
 		system:filetype is image
+
+### Skipping already-tagged files (`--skip-tagged`)
+When you pass `--skip-tagged` together with `--tags`, the tool automatically adds a negative search term for the current model’s AI marker (for example `-wd eva02 large tagger v3 ai generated tags`). Hydrus excludes those files from the results, so the tool never receives, queues, or logs them. The marker is read from the selected model’s `info.json`, so it works for any model you have installed. A post-fetch check still exists as a fallback for hash-file mode.
+
+### Stopping after N successful tags (`--limit`)
+`--limit N` stops the run after N files have been successfully tagged. Skips do not count. If your `tags.txt` does not contain a `system:limit`, the tool adds a safety cap (`system:limit is N*20`) so it cannot pull the entire database. If you already set a `system:limit`, it is left alone.
+
+### Checkpoint and resume
+Every instance writes two logs in the root folder:
+- `hashes.processed.log` — hashes that were successfully tagged
+- `hashes.skipped.log` — hashes that were skipped for a real reason (failed download, failed write, etc.), with a short explanation
+
+A `hashes.batch.complete` marker is written only when a batch finishes cleanly. By default, if that marker is missing (crash, abort, or power loss), the next launch resumes from the checkpoint. Pass `--skip-resume` to force a fresh batch even if an unfinished checkpoint exists. The logs are left in place after the run so you can review them.
+
+### hashes.txt accepts the sha256: prefix
+ - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now strips that prefix automatically, so you no longer need to remove it by hand. Plain hashes still work.
+
+### Video and animated files
+Multi-frame files (video, GIF, etc.) are sampled rather than tagged as a single image. Up to five frames are taken from across the file, each is tagged, and the scores are combined. The threshold is raised for these files so weak tags do not survive. Flash files (`.swf`, `.fla`, `.flash`) are excluded — they cannot be decoded. `av` is required for video decoding and is listed in `requirements.txt`. Thanks to Assamber (PR #10) for this feature!
 
 ## Running in CLI
 ### Evaluate a file
@@ -162,6 +177,10 @@ Where hashes.txt is a file containing one Hydrus file hash per line.
   --tag-service TEXT  The tag service to send tags that match the threshold to
   --ratings-only BOOL Drop all tags except for those that identify the content rating
   --privacy BOOL      Show or hide the tag output to the cli
+  --tags              Treat the input file as a list of Hydrus search tags instead of hashes
+  --skip-resume       Ignore any unfinished checkpoint and start a fresh batch
+  --skip-tagged       With --tags, exclude files that already have the current model's AI marker
+  --limit INTEGER     Stop after this many files have been successfully tagged
 ```
 
 ## RANDOM INFO:
@@ -202,5 +221,6 @@ YOU MUST REBUILD THE VENV IF YOU MOVE OR RENAME THIS FOLDER
 - SmilingWolf for the WD tagging models as well as some simple code to detect Kaomojis. (https://huggingface.co/SmilingWolf)
 - Abtalerico for the well made original tool that I poorly edited to make this. (https://github.com/abtalerico/wd-hydrus-tagger) (deleted, copy can be found at  https://github.com/Garbevoir/wd-e621-hydrus-tagger/tree/main)
 - Zack3d (furzacky) for the E621 tagging model. (https://discord.com/channels/754509198674362388/1065785788698218526) (https://discord.gg/BDFpq9Yb7K)
+- Assamber for the video and animated file sampling support (PR #10).
 - This moderator on the Nvidia developer forums for providing safe downloads for zlibwapi.dll. (https://forums.developer.nvidia.com/t/could-not-load-library-cudnn-cnn-infer64-8-dll-error-code-193/218437/16)
 - Hydrus Dev for developing and improving hydrus nonstop for several years, the real G.O.A.T. (https://hydrusnetwork.github.io/hydrus/index.html)
