@@ -124,12 +124,13 @@ When you pass `--skip-tagged` together with `--tags`, the tool automatically add
 If you set `--limit N`, the tool stops after N files have been successfully tagged. Files that are skipped do not count toward that number.
 When `--limit` is set and your `tags.txt` does not already contain a `system:limit`, the tool adds one for you (`system:limit is N*20`). This keeps Hydrus from returning the entire database when you only want a small batch. If you already put a `system:limit` in `tags.txt`, that one is kept and no extra cap is added. To process everything, omit `--limit` and do not put a `system:limit` in `tags.txt`.
 
-### Checkpoint and resume
-Every instance writes two logs in the root folder:
-- `hashes.processed.log` — hashes that were successfully tagged
-- `hashes.skipped.log` — hashes that were skipped for a real reason (failed download, failed write, etc.), with a short explanation
+### session.log and resume function
+Every instance writes a session log in the root folder:
+- `session.log` contains a printout of the initialization debug lines so you can see exactly what step of initialization fails. Then it prints all the hashes that Hydrus reports can be processed. During processing: each hash is appended with a status like OK, FAILED, SKIPPED, UUNSUPPORTED, UNABLE TO DECODE, etc. On a clean exit (not a crash/termination) each hash that was successfully tagged OK has that status removed. This presents the bare SHA256 hash per line. Excellent for copy-and-pasting. Any hashes that were skipped for any reason (failed download, failed write, etc.), will still have that reason appended to them so you can troubleshoot those hashes. These are typically either corrupted files or files with an incorrect system:filetype tag. 
 
-A `hashes.batch.complete` marker is written only when a batch finishes cleanly. By default, if that marker is missing (crash, abort, or power loss), the next launch resumes from the checkpoint. Pass `--skip-resume` to force a fresh batch even if an unfinished checkpoint exists. The logs are left in place after the run so you can review them.
+### Resume (checkpoint) function
+Every instance checks for a `session.complete` file to determine if the last session exited cleanly or not. If not; it uses the `session.log` file as a checkpoint for resuming where the last hashes were marked with OK status. If it does find `session.complete` then it assumes the last session exited cleanly and will start a new `session.log` file. 
+- `--skip-resume` flag will ignore the checkpoint and start a fresh batch should you ever need it. 
 
 ### `hashes.txt` accepts the sha256: prefix
  - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now strips that prefix automatically, so you no longer need to remove it by hand. Plain hashes still work.
