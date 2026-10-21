@@ -69,7 +69,7 @@ def cli():
 @click.argument("filename")
 @click.option("--cpu", default=False, help="Use CPU instead of GPU")
 @click.option("--model", default="wd-v1-4-vit-tagger-v2", help="The tagging model to use")
-@click.option("--threshold", default=0.35, help="The threshhold to drop tags below")
+@click.option("--threshold", default=0.35, help="The threshold to drop tags below")
 def evaluate(filename, cpu, model, threshold):
     config = load_config()
     cpu = resolve(cpu if cpu is not False else None, "cpu", False, config)
@@ -114,7 +114,7 @@ def evaluate(filename, cpu, model, threshold):
 @click.option("--token", help="The API token for your Hydrus server")
 @click.option("--cpu", default=False, help="Use CPU instead of GPU")
 @click.option("--model", default="SmilingWolf/wd-v1-4-vit-tagger-v2", help="The tagging model to use")
-@click.option("--threshold", default=0.35, help="The threshhold to drop tags below")
+@click.option("--threshold", default=0.35, help="The threshold to drop tags below")
 @click.option("--host", default="http://127.0.0.1:45869", help="The URL for your Hydrus server ")
 @click.option("--tag-service", default="A.I. Tags", help="The Hydrus tag service to add tags to")
 @click.option("--ratings-only", default=False, help="Strip all tags except for content rating")
@@ -125,7 +125,7 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
     if not token:
         raise click.UsageError("API token required. Set 'token' in config.yaml or pass --token")
     cpu = resolve(cpu if cpu is not False else None, "cpu", False, config)
-    model = resolve(model if model != "SmilingWolf/wd-v1-4-vit-tagger-v2" else None, "model", "wd-v1-4-vit-tagger-v2", config)
+    model = resolve(model if model != "wd-v1-4-vit-tagger-v2" else None, "model", "wd-v1-4-vit-tagger-v2", config)
     threshold = resolve(threshold if threshold != 0.35 else None, "threshold", 0.35, config)
     host = resolve(host if host != "http://127.0.0.1:45869" else None, "host", "http://127.0.0.1:45869", config)
     tag_service = resolve(tag_service if tag_service != "A.I. Tags" else None, "tag_service", "A.I. Tags", config)
@@ -195,7 +195,7 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
 @click.option("--token", help="The API token for your Hydrus server")
 @click.option("--cpu", default=False, help="Use CPU instead of GPU")
 @click.option("--model", default="wd-v1-4-vit-tagger-v2", help="The tagging model to use")
-@click.option("--threshold", default=0.35, help="The threshhold to drop tags below")
+@click.option("--threshold", default=0.35, help="The threshold to drop tags below")
 @click.option("--host", default="http://127.0.0.1:45869", help="The URL for your Hydrus server ")
 @click.option("--tag-service", default="A.I. Tags", help="The Hydrus tag service to add tags to")
 @click.option("--ratings-only", default=False, help="Strip all tags except for content rating")
@@ -441,8 +441,9 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
                             continue
                         image = Image.fromarray(frame)
                         rate, tag = integerator.interrogate(image)
-                        for r in rate:
-                            ratings[r] = ratings.get(r, 0) + rate[r]
+                        if rate:
+                            for r in rate:
+                                ratings[r] = ratings.get(r, 0) + rate[r]
                         for t in tag:
                             tags[t] = tags.get(t, 0) + tag[t]
                         successful_frames += 1
