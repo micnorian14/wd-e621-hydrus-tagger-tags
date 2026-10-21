@@ -148,11 +148,10 @@ python -m wd-hydrus-tagger evaluate /path/to/file
 
 ### Evaluate a file in Hydrus
 ```bash
-python -m wd-hydrus-tagger evaluate-api --token your_hydrus_token 123_your_files_hash_456
+python -m wd-hydrus-tagger evaluate-api 123_your_files_hash_456
 ```
 #### Options:
 ```
-  --token TEXT        The API token for your Hydrus server
   --cpu BOOLEAN       Use CPU instead of GPU
   --model TEXT        The tagging model folder to use
   --threshold FLOAT   The threshhold to drop tags below
@@ -164,13 +163,12 @@ python -m wd-hydrus-tagger evaluate-api --token your_hydrus_token 123_your_files
 
 ### Evaluate a number of files in Hydrus
 ```bash
-python -m wd-hydrus-tagger evaluate-api-batch --token your_hydrus_token hashes.txt
+python -m wd-hydrus-tagger evaluate-api-batch hashes.txt
 ```
 Where hashes.txt is a file containing one Hydrus file hash per line.
 
 #### Options:
 ```
-  --token TEXT        The API token for your Hydrus server
   --cpu BOOLEAN       Use CPU instead of GPU
   --model TEXT        The tagging model folder to use
   --threshold FLOAT   The threshhold to drop tags below
