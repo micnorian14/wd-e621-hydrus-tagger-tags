@@ -130,7 +130,7 @@ Every instance writes a session log in the root folder:
 
 ### Resume (checkpoint) function
 Every instance checks for a `session.complete` file to determine if the last session exited cleanly or not. If not; it uses the `session.log` file as a checkpoint for resuming where the last hashes were marked with OK status. If it does find `session.complete` then it assumes the last session exited cleanly and will start a new `session.log` file. 
-- `--skip-resume` flag will ignore the checkpoint and start a fresh batch should you ever need it. 
+- `--skip-resume` flag will ignore the checkpoint and start a clean session should you ever need it. 
 
 ### `hashes.txt` accepts the sha256: prefix
  - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now strips that prefix automatically, so you no longer need to remove it by hand. Plain hashes still work.
