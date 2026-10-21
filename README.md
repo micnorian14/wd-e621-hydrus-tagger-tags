@@ -118,7 +118,9 @@ Alternatively, you can process files by Hydrus search tags instead of manually e
 When you pass `--skip-tagged` together with `--tags`, the tool automatically adds a negative search term for the current model’s AI marker (for example `-wd eva02 large tagger v3 ai generated tags`). Hydrus excludes those files from the results, so the tool never receives, queues, or logs them. The marker is read from the selected model’s `info.json`, so it works for any model you have installed. A post-fetch check still exists as a fallback for hash-file mode.
 
 ### Stopping after N successful tags (`--limit`)
-`--limit N` stops the run after N files have been successfully tagged. Skips do not count. If your `tags.txt` does not contain a `system:limit`, the tool adds a safety cap (`system:limit is N*20`) so it cannot pull the entire database. If you already set a `system:limit`, it is left alone.
+`--limit` is optional. If you leave it off, there is no limit — the tool processes every file Hydrus returns for the search.
+If you set `--limit N`, the tool stops after N files have been successfully tagged. Files that are skipped do not count toward that number.
+When `--limit` is set and your `tags.txt` does not already contain a `system:limit`, the tool adds one for you (`system:limit is N*20`). This keeps Hydrus from returning the entire database when you only want a small batch. If you already put a `system:limit` in `tags.txt`, that one is kept and no extra cap is added. To process everything, omit `--limit` and do not put a `system:limit` in `tags.txt`.
 
 ### Checkpoint and resume
 Every instance writes two logs in the root folder:
@@ -221,6 +223,6 @@ YOU MUST REBUILD THE VENV IF YOU MOVE OR RENAME THIS FOLDER
 - SmilingWolf for the WD tagging models as well as some simple code to detect Kaomojis. (https://huggingface.co/SmilingWolf)
 - Abtalerico for the well made original tool that I poorly edited to make this. (https://github.com/abtalerico/wd-hydrus-tagger) (deleted, copy can be found at  https://github.com/Garbevoir/wd-e621-hydrus-tagger/tree/main)
 - Zack3d (furzacky) for the E621 tagging model. (https://discord.com/channels/754509198674362388/1065785788698218526) (https://discord.gg/BDFpq9Yb7K)
-- Assamber for the video and animated file sampling support (PR #10).
+- Assamber for the video and animated file sampling support! (https://github.com/Garbevoir/wd-e621-hydrus-tagger/pull/10)
 - This moderator on the Nvidia developer forums for providing safe downloads for zlibwapi.dll. (https://forums.developer.nvidia.com/t/could-not-load-library-cudnn-cnn-infer64-8-dll-error-code-193/218437/16)
 - Hydrus Dev for developing and improving hydrus nonstop for several years, the real G.O.A.T. (https://hydrusnetwork.github.io/hydrus/index.html)
