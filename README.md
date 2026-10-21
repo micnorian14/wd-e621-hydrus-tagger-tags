@@ -116,6 +116,9 @@ Alternatively, you can process files by Hydrus search tags instead of manually e
 ### Skipping already-tagged files (`--skip-tagged`)
 When you pass `--skip-tagged` together with `--tags`, the tool automatically adds a negative search term for the current model’s AI marker (for example `-wd eva02 large tagger v3 ai generated tags`). Hydrus excludes those files from the results, so the tool never receives, queues, or logs them. The marker is read from the selected model’s `info.json`, so it works for any model you have installed. A post-fetch check still exists as a fallback for hash-file mode.
 
+- The `--skip-tagged` flag only excludes files tagged by the model you are currently running. If you previously tagged files with a different model (for example `wd-v1-4-vit-tagger-v2`), those files carry a different marker and will not be skipped. To exclude them as well, add the inverse of the old marker to your tags.txt file: `-wd v1.4 vit tagger v2 ai generated tags`
+- You can find the exact marker string in the old model’s info.json (modelname field). Add one inverse line per model you want to skip.
+
 ### Stopping after N successful tags (`--limit`)
 `--limit` is optional. If you leave it off, there is no limit — the tool processes every file Hydrus returns for the search.
 If you set `--limit N`, the tool stops after N files have been successfully tagged. Files that are skipped do not count toward that number.
