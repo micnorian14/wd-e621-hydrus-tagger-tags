@@ -4,6 +4,12 @@ import numpy as np
 import re
 import click
 
+session_debug = []
+
+def debug(msg):
+    click.echo(msg)
+    session_debug.append(msg)
+
 from typing import Tuple, Dict
 from PIL import Image
 from pathlib import Path
@@ -40,7 +46,7 @@ class WaifuDiffusionInterrogator:
         self.kwargs = kwargs
 
     def findpaths(self) -> Tuple[os.PathLike, os.PathLike]:
-        click.echo(f"DEBUG: Loading {self.name} model file from {self.kwargs['repo_id']}")
+        debug(f"DEBUG: Loading {self.name} model file from {self.kwargs['repo_id']}")
 
         model_file = Path('./model/' + self.folder + '/' + self.model_file)
         tags_file = Path('./model/' + self.folder + '/' + self.tags_file)
@@ -48,46 +54,46 @@ class WaifuDiffusionInterrogator:
 
     def load(self, cpu=True) -> None:
         model_file, tags_file = self.findpaths()
-        click.echo(f"DEBUG: model path = {model_file}")
-        click.echo(f"DEBUG: model exists = {model_file.exists()}")
-        click.echo(f"DEBUG: tags path = {tags_file}")
-        click.echo(f"DEBUG: tags exists = {tags_file.exists()}")
+        debug(f"DEBUG: model path = {model_file}")
+        debug(f"DEBUG: model exists = {model_file.exists()}")
+        debug(f"DEBUG: tags path = {tags_file}")
+        debug(f"DEBUG: tags exists = {tags_file.exists()}")
 
-        click.echo("DEBUG: checking if onnxruntime is installed...")
+        debug("DEBUG: checking if onnxruntime is installed...")
         installed = onnx_loader.is_installed('onnxruntime')
-        click.echo(f"DEBUG: onnxruntime installed = {installed}")
+        debug(f"DEBUG: onnxruntime installed = {installed}")
 
         if not installed:
-            click.echo("DEBUG: onnxruntime not found, attempting install...")
+            debug("DEBUG: onnxruntime not found, attempting install...")
             package = os.environ.get('ONNXRUNTIME_PACKAGE', 'onnxruntime-gpu')
             onnx_loader.run_pip(f'install {package}', 'onnxruntime')
 
-        click.echo("DEBUG: about to import onnxruntime...")
+        debug("DEBUG: about to import onnxruntime...")
         try:
             import onnxruntime
-            click.echo(f"DEBUG: onnxruntime imported, version = {onnxruntime.__version__}")
+            debug(f"DEBUG: onnxruntime imported, version = {onnxruntime.__version__}")
             InferenceSession = onnxruntime.InferenceSession
-            click.echo("DEBUG: InferenceSession obtained")
+            debug("DEBUG: InferenceSession obtained")
         except Exception as e:
-            click.echo("DEBUG: import failed!")
+            debug("DEBUG: import failed!")
             click.echo(repr(e))
             raise
 
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         if cpu:
             providers.pop(0)
-        click.echo(f"DEBUG: using providers = {providers}")
+        debug(f"DEBUG: using providers = {providers}")
 
         try:
             self.model = InferenceSession(str(model_file), providers=providers)
             click.echo(f'DEBUG: Loaded {self.name} model from {model_file}')
         except Exception as e:
-            click.echo("DEBUG: InferenceSession failed!")
+            debug("DEBUG: InferenceSession failed!")
             click.echo(repr(e))
             raise
 
         self.tags = pd.read_csv(tags_file)
-        click.echo("DEBUG: tags CSV loaded")
+        debug("DEBUG: tags CSV loaded")
 
     def interrogate(
             self,

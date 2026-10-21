@@ -1,4 +1,5 @@
 import os.path
+import re
 
 import click
 from PIL import Image, ImageFile
@@ -190,6 +191,12 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
     })
 
 
+def debug(msg):
+    """Print a debug line and record it for session.log."""
+    click.echo(msg)
+    interrogate.session_debug.append(msg)
+
+
 @click.command()
 @click.argument("inputfile")
 @click.option("--token", help="The API token for your Hydrus server")
@@ -205,6 +212,7 @@ def evaluate_api(hash, token, cpu, model, threshold, host, tag_service, ratings_
 @click.option("--skip-tagged", is_flag=True, help="Skip files that already have an AI-generated tags marker")
 @click.option("--limit", type=int, default=None, help="Stop after this many files have been successfully tagged (skips do not count)")
 def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_service, ratings_only, privacy, tags, skip_resume, skip_tagged, limit):
+    interrogate.session_debug.clear()
     config = load_config()
     token = resolve(token, "token", None, config)
     if not token:
@@ -249,7 +257,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
     if not service_key:
         raise ValueError(f"Tag service '{tag_service}' not found")
 
-    checkpoint_file = "hashes.processed.log"
+    checkpoint_file = "session.log"
     complete_marker = "hashes.batch.complete"
     resuming = False
     already_done = set()
@@ -259,37 +267,43 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
     # after the search. The log only contains hashes we actually attempted,
     # so we always re-query and then skip anything already in the log.
     if skip_resume:
-        click.echo("DEBUG: --skip-resume set; starting fresh batch")
+        debug("DEBUG: --skip-resume set; starting fresh batch")
     elif os.path.isfile(complete_marker):
-        click.echo("DEBUG: previous batch completed; starting fresh")
+        debug("DEBUG: previous batch completed; starting fresh")
     elif os.path.isfile(checkpoint_file):
         with open(checkpoint_file) as f:
             lines = [line.rstrip("\n") for line in f if line.strip()]
         stored_limit = None
-        if lines and lines[0].startswith("#limit:"):
-            try:
-                stored_limit = int(lines[0].split(":", 1)[1])
-            except ValueError:
-                stored_limit = None
-            lines = lines[1:]
-        already_done = {line.split("\t", 1)[0] for line in lines if line.strip()}
-        ok_count = sum(1 for line in lines if line.endswith("\tOK"))
+        hash_lines = []
+        for line in lines:
+            if line.startswith("#limit:"):
+                try:
+                    stored_limit = int(line.split(":", 1)[1])
+                except ValueError:
+                    pass
+                continue
+            # Only real hashes count. Debug lines and comments are ignored.
+            candidate = line.split("\t", 1)[0]
+            if re.fullmatch(r"[0-9a-fA-F]{64}", candidate):
+                hash_lines.append(line)
+        already_done = {line.split("\t", 1)[0] for line in hash_lines}
+        ok_count = sum(1 for line in hash_lines if line.endswith("\tOK"))
         done_count = len(already_done)
         if done_count:
             resuming = True
             if stored_limit is not None:
                 remaining_limit = max(0, stored_limit - ok_count)
                 limit = remaining_limit
-                click.echo(f"DEBUG: unfinished batch found — resuming with {done_count} done ({ok_count} OK), {remaining_limit} left of original limit {stored_limit}")
+                debug(f"DEBUG: unfinished batch found — resuming with {done_count} done ({ok_count} OK), {remaining_limit} left of original limit {stored_limit}")
                 if remaining_limit == 0:
-                    click.echo("DEBUG: original limit already reached; nothing to do")
+                    debug("DEBUG: original limit already reached; nothing to do")
                     hashes = None  # sentinel: skip search and processing
             else:
-                click.echo(f"DEBUG: unfinished batch found — resuming with {done_count} done")
+                debug(f"DEBUG: unfinished batch found — resuming with {done_count} done")
         else:
-            click.echo("DEBUG: checkpoint empty; starting fresh")
+            debug("DEBUG: checkpoint empty; starting fresh")
     else:
-        click.echo("DEBUG: no previous batch found; starting fresh")
+        debug("DEBUG: no previous batch found; starting fresh")
 
     if hashes is None:
         hashes = []
@@ -304,15 +318,15 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             if not has_system_limit:
                 safety = limit * 20
                 search_tags.append(f"system:limit is {safety}")
-                click.echo(f"DEBUG: --limit {limit} set with no system:limit; adding safety cap of {safety}")
+                debug(f"DEBUG: --limit {limit} set with no system:limit; adding safety cap of {safety}")
             else:
-                click.echo(f"DEBUG: --limit {limit} set; keeping your system:limit")
+                debug(f"DEBUG: --limit {limit} set; keeping your system:limit")
         # Flash files (.swf/.fla/.flash) cannot be processed. Always exclude them
         # from tag searches so Hydrus never returns them.
         flash_filter = "system:filetype is not flash"
         if flash_filter not in search_tags:
             search_tags.append(flash_filter)
-            click.echo("DEBUG: excluding flash files from search")
+            debug("DEBUG: excluding flash files from search")
         # --skip-tagged: let Hydrus exclude already-tagged files instead of
         # fetching them and skipping after the fact. Uses the current model's
         # own marker so it works for any model the user has installed.
@@ -321,14 +335,14 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             negative = "-" + marker
             if negative not in search_tags and marker not in search_tags:
                 search_tags.append(negative)
-                click.echo(f"DEBUG: --skip-tagged set; adding negative search term: {negative}")
-        click.echo(f"DEBUG: Searching Hydrus for tags: {search_tags}")
+                debug(f"DEBUG: --skip-tagged set; adding negative search term: {negative}")
+        debug(f"DEBUG: Searching Hydrus for tags: {search_tags}")
         result = client.search_files(tags=search_tags, return_hashes=True)
         if isinstance(result, dict):
             hashes = result.get("hashes", [])
         else:
             hashes = result
-        click.echo(f"DEBUG: Found {len(hashes)} files")
+        debug(f"DEBUG: Found {len(hashes)} files")
     else:
         with open(inputfile) as hashfile_f:
             hashes = []
@@ -345,17 +359,25 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
     if already_done:
         before = len(hashes)
         hashes = [h for h in hashes if h not in already_done]
-        click.echo(f"DEBUG: excluded {before - len(hashes)} already-logged hashes; {len(hashes)} candidates remaining")
+        debug(f"DEBUG: excluded {before - len(hashes)} already-logged hashes; {len(hashes)} candidates remaining")
 
-    # Fresh batch: write only the limit header. Hashes are appended as
-    # they are actually processed, so the log never holds unprocessed ones.
+    # Fresh batch: write the debug block, then the limit header. Hashes are
+    # appended as they are actually processed, so the log never holds
+    # unprocessed ones. On resume, append a separator and the new debug.
     if not resuming:
         if os.path.isfile(complete_marker):
             os.remove(complete_marker)
+        debug(f"DEBUG: initialized {checkpoint_file}")
         with open(checkpoint_file, "w") as f:
+            for line in interrogate.session_debug:
+                f.write(line + "\n")
             if limit:
                 f.write(f"#limit:{limit}\n")
-        click.echo(f"DEBUG: initialized {checkpoint_file}")
+    else:
+        with open(checkpoint_file, "a") as f:
+            f.write("\n# resumed\n")
+            for line in interrogate.session_debug:
+                f.write(line + "\n")
 
     # Append a processed hash to the log. status is "OK" or a failure reason.
     def log_result(hash_value, status):
@@ -363,7 +385,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
             with open(checkpoint_file, "a") as f:
                 f.write(f"{hash_value}\t{status}\n")
         except Exception as e:
-            click.echo(f"DEBUG: failed to update checkpoint for {hash_value}: {e}")
+            debug(f"DEBUG: failed to update checkpoint for {hash_value}: {e}")
 
     tagged_count = 0
     skipped_count = 0
@@ -517,7 +539,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
                 if limit:
                     bar.update(1)
                 if limit and tagged_count >= limit:
-                    click.echo(f"DEBUG: reached --limit {limit}; stopping")
+                    debug(f"DEBUG: reached --limit {limit}; stopping")
                     break
             except Exception as e:
                 log_result(hash, f"failed to add tags: {e}")
@@ -536,11 +558,11 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
                     f.write(stripped[:-3] + "\n")
                 else:
                     f.write(line if line.endswith("\n") else line + "\n")
-        click.echo("DEBUG: stripped OK status from successful hashes in hashes.processed.log")
+        debug("DEBUG: stripped OK status from successful hashes in session.log")
     except Exception as e:
-        click.echo(f"DEBUG: failed to clean OK statuses: {e}")
+        debug(f"DEBUG: failed to clean OK statuses: {e}")
 
-    click.echo(f"DEBUG: batch complete — tagged {tagged_count} files, skipped {skipped_count} files — see hashes.processed.log for details")
+    debug(f"DEBUG: batch complete — tagged {tagged_count} files, skipped {skipped_count} files — see session.log for details")
     # Mark the batch as finished so the next launch starts fresh by default.
     with open(complete_marker, "w") as f:
         f.write(f"tagged={tagged_count} skipped={skipped_count}\n")
