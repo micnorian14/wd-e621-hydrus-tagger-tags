@@ -124,16 +124,14 @@ When you pass `--skip-tagged` together with `--tags`, the tool automatically add
 If you set `--limit N`, the tool stops after N files have been successfully tagged. Files that are skipped do not count toward that number.
 When `--limit` is set and your `tags.txt` does not already contain a `system:limit`, the tool adds one for you (`system:limit is N*20`). This keeps Hydrus from returning the entire database when you only want a small batch. If you already put a `system:limit` in `tags.txt`, that one is kept and no extra cap is added. To process everything, omit `--limit` and do not put a `system:limit` in `tags.txt`.
 
-### session.log and resume function
+### Session log and resume function
 Every instance writes a session log in the root folder:
 - `session.log` contains a printout of the initialization debug lines so you can see exactly what step of initialization fails. Then it prints all the hashes that Hydrus reports can be processed. During processing: each hash is appended with a status like OK, FAILED, SKIPPED, UUNSUPPORTED, UNABLE TO DECODE, etc. On a clean exit (not a crash/termination) each hash that was successfully tagged OK has that status removed. This presents the bare SHA256 hash per line. Excellent for copy-and-pasting. Any hashes that were skipped for any reason (failed download, failed write, etc.), will still have that reason appended to them so you can troubleshoot those hashes. These are typically either corrupted files or files with an incorrect system:filetype tag. 
-
-### Resume (checkpoint) function
-Every instance checks for a `session.complete` file to determine if the last session exited cleanly or not. If not; it uses the `session.log` file as a checkpoint for resuming where the last hashes were marked with OK status. If it does find `session.complete` then it assumes the last session exited cleanly and will start a new `session.log` file. 
+- Every instance checks for a `session.complete` file in the root folder to determine if the last session exited cleanly or not. If not; it uses the `session.log` file as a checkpoint for resuming where the last hashes were marked with OK status. If `session.complete` is present then it assumes the last session exited cleanly and will start a new `session.log` file. 
 - `--skip-resume` flag will ignore the checkpoint and start a clean session should you ever need it. 
 
 ### `hashes.txt` accepts the sha256: prefix
- - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now strips that prefix automatically, so you no longer need to remove it by hand. Plain hashes still work.
+ - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now ignores that prefix automatically so you no longer need to remove it by hand. Plain hashes still work so as not to break anyone's existing workflow. 
 
 ### Video and animated files
 Multi-frame files (video, GIF, etc.) are sampled rather than tagged as a single image. Up to five frames are taken from across the file, each is tagged, and the scores are combined. The threshold is raised for these files so weak tags do not survive. Flash files (`.swf`, `.fla`, `.flash`) are excluded — they cannot be decoded. `av` is required for video decoding and is listed in `requirements.txt`. Thanks to Assamber (PR #10) for this feature!
