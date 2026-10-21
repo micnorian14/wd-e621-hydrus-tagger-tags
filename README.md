@@ -20,7 +20,7 @@ The original requirements for this tool called for either python 3.9.x or 3.10.x
 This edit of the tool specifically uses local downloads of the model instead of cache downloads from the internet. This means you will need to download the models yourself. You can find the models by navigating to their specific folder in the models folder and reading the .txt file.
 
 ## INFO.JSON:
-In the two pre-made model folders are info.json files. These inform the tagger of what tagging model is being loaded as well as what it's capabilities are. This is important for certain functions such as tagging only the content rating (safe, explicit, etc.) If you want to use new models that don't have a folder created by default, all you need to do is make a new folder with the new model's .onnx and .csv file in it, then create an info.json with the correct info for it.
+In the three pre-made model folders are info.json files. These inform the tagger of what tagging model is being loaded as well as what it's capabilities are. This is important for certain functions such as tagging only the content rating (safe, explicit, etc.) If you want to use new models that don't have a folder created by default, all you need to do is make a new folder with the new model's .onnx and .csv file in it, then create an info.json with the correct info for it.
 
 ## HYDRUS PREPARATION:
 1. In Hydrus, navigate to services > manage services
@@ -51,20 +51,20 @@ All other settings (host, model, threshold, tag_service, cpu, ratings_only, priv
 CLI flags always override values from the config file.
 
 ## .BAT FILE PREPARATIONS:
-There are 4 .bat files, `start.bat`, `e621.bat`, `wd.bat`, and `ratings.bat`. `start.bat` should not be edited.
+There are several .bat files: `start.bat`, `run_wd_hashes.bat`, `run_wd_tags.bat`, `run_e621_hashes.bat`, `run_e621_tags.bat`, and `run_wd_ratings.bat`. `start.bat` should not need to be edited.
 The .bat files no longer contain your API token — that is in config.yaml now.
 You can still override model, tags mode, etc. directly in the .bat files if you want different defaults per script.
 The premade .bat files currently point at the wd-eva02-large-tagger-v3 model. You still need to download the model files into the corresponding folder; the .bat files only select which model to use.
 
 # Now you should be prepared and ready to start automatically tagging files. 
-I recommend starting with a single file or a small group of files, and testing wd.bat, e621.bat, and ratings.bat individually. Make sure the tags are being put into your AI tagging service, that tag siblings/parents are displaying correctly, and that the file is properly tagged as being AI tagged. If all is well, you can proceed to mass tagging.
+I recommend starting with a single file or a small group of files, and testing `run_wd_tags.bat`, `run_e621_hashes.bat`, and `run_wd_ratings.bat` individually. Make sure the tags are being put into your AI tagging service, that tag siblings/parents are displaying correctly, and that the file is properly tagged as being AI tagged. If all is well, you can proceed to mass tagging.
 
 ## (OPTIONAL) CONVENIENCE CHANGE:
 1. In the folder this .md file is in, navigate to venv\Scripts\
-2. Open activate.bat in a text editor
+2. Open `activate.bat` in a text editor
 3. At the bottom of the file, add "cmd /k" to a new line
    
-You can now double-click start.bat to automatically open the venv.
+You can now double-click `start.bat` to automatically open the venv.
 
 ## (OPTIONAL) ENABLING GPU USE:
 The program does not have GPU utilization capability by default due to the necessary files having to be sourced from elsewhere. To enable GPU use for windows installations:
@@ -93,16 +93,15 @@ To enable GPU use for *wd-v3* SmilingWolf models, such as [wd-eva02-large-tagger
 	- **VERY IMPORTANT!** The installer automatically adds only `\bin\` folder to your Windows PATH which is incorrect!
 	- To make it correct you need to edit the Windows PATH variable to according to CUDA version you are using, so it should look like this `C:\Program Files\NVIDIA\CUDNN\v9.5\bin\12.6` please **double check** this PATH to avoid issues.
 - Additionally make sure that you have all possible **Visual C++ Redistributables** installed on your system, decent source for all-in-one package can be found [here](https://github.com/abbodi1406/vcredist) if you don't want to install each one of them manually.
-- After you make sure that PATH variables are correct you can utilize your GPU for tagging. If you followed the initial preparation/setup steps correctly — refer to the instructions below on how to add different models. Once you edited your wd.bat to use `--cpu 0` it should automatically install latest onnxruntime-gpu to your venv on the first run.
+- After you make sure that PATH variables are correct you can utilize your GPU for tagging. If you followed the initial preparation/setup steps correctly — refer to the instructions below on how to add different models. Once you edited your `.bat` to use `--cpu 0` it should automatically install latest onnxruntime-gpu to your venv on the first run.
 
 ## FOR NORMAL USE:
 1. Open command line in the root folder and type start.bat or double-click if the convenience change has been made
 2. With Hydrus OPEN:
 	- a. Copy a list of sha256 hashes from Hydrus (right click on file, navigate to share > copy > hash/hashes > sha256)
-	- b. Paste list into hashes.txt
-	- c. Replace all the "sha256:" in the txt file with nothing, should just be the hash on each line, no spaces
-3. Run wd.bat from command line OR if doing specifically furry art, run e621.bat
-4. (optional) If you need or want to, you can run ratings.bat to only get ratings tags, no content tags
+	- b. Paste list into hashes.txt (the `sha256:` prefix is stripped automatically)
+3. Run run_wd_hashes.bat for general tagging, or run_e621_hashes.bat for furry art
+4. (optional) Run run_wd_ratings.bat to get ratings tags only, with no content tags
 
 ### Processing by Tags (`--tags`)
 Alternatively, you can process files by Hydrus search tags instead of manually exporting hashes.
@@ -189,23 +188,23 @@ Where hashes.txt is a file containing one Hydrus file hash per line.
 Everything has been confirmed to work on various Windows 10 installations. I've also read about other people getting everything (except GPU utilization) working on various linux distributions by changing the .bat files.
 If you do run into problems on other operating systems, the culprit is likely in interrogate.py, specifically where path() is invoked or it's something to do with the .bat files and how they're written.
 
-e621.bat uses an e621 model that doesn't tag content ratings but should provide much more accurate tags for furry artwork. For example, where an anthropomorphic dragon would be tagged "demon girl" by the WD tagger, e621 will properly recognize it as an anthropomorphic dragon and tag it as such.
-ratings.bat runs the normal WD model which DOES tag ratings, but discards all tags except for the ratings.
-It's recommended to run ratings.bat AFTER running e621.bat so that furry art can be tagged with more accurate tags as well as a rating tag.
-Note that this is UNNECESSARY if wd.bat is ran on the file FIRST, as it will already have a rating tag. (unless you decide to delete the WD tags afterwards)
+run_e621_hashes.bat uses an e621 model that doesn't tag content ratings but should provide much more accurate tags for furry artwork. ...
+run_wd_ratings.bat runs the normal WD model which DOES tag ratings, but discards all tags except for the ratings.
+It's recommended to run run_wd_ratings.bat AFTER running run_e621_hashes.bat ...
+Note that this is UNNECESSARY if run_wd_hashes.bat is ran on the file FIRST ...
 
 All modules have been edited to automatically add an "ai generated tags" tag to the file thats specific to which tagger was run.
 All .bat files use evaluate-api-batch, meaning to check individual files you MUST use hashes.txt or enter the command yourself.
 
-If you don't need furry or rating tagging capability, simply delete e621.bat/ratings.bat, as well as the Z3d-E621-Convnext folder
+If you don't need furry or rating tagging capability, simply delete run_e621_hashes.bat/run_wd_ratings.bat, as well as the Z3d-E621-Convnext folder
 
 My personal workflow is to have a hydrus search page that excludes all AI tags, filters to only PNG/JPG/WEBP images, and only images with less than 10 tags already (to avoid tagging already well-tagged files.) I also limit the results to around 2048 images, since that takes roughly an hour to process on my system.
-After tagging EVERYTHING with wd.bat, there will be some files that have been tagged with "furry" or "female furry".
-I then have another search page that collects all these newly identified furry files, and I run e621.bat on them after a sufficient amount is identified.
+After tagging EVERYTHING with run_wd_hashes.bat, there will be some files that have been tagged with "furry" or "female furry".
+I then have another search page that collects all these newly identified furry files, and I run run_e621_hashes.bat on them after a sufficient amount is identified.
 
 I personally don't understand the difference between the different ViT/Convnext/MOAT tagging models, and since ViT was the default included with the tool, it's what I've been using.
 
-If you prefer a different model for some reason, then just create a new folder in the /model/ folder, put your .onnx and .csv file in there, then copy and paste an info.json from another folder and edit it appropriately. Then you can edit or copy wd.bat and change the folder being pointed to from "wd-v1-4-vit-tagger-v2" to whatever you named your new folder. alternatively, you could just replace the "model.onnx" and "selected_tags.csv" files in the "wd-v1-4-vit-tagger-v2" folder with the ones you downloaded. I don't recommend this since it could lead to confusion on what model is actually being ran as well as overwriting the original tagging model, but if it's similar enough it should work okay.
+If you prefer a different model for some reason, then just create a new folder in the /model/ folder, put your .onnx and .csv file in there, then copy and paste an info.json from another folder and edit it appropriately. Then you can edit or copy run_wd_hashes.bat and change the folder being pointed to from "wd-v1-4-vit-tagger-v2" to whatever you named your new folder. alternatively, you could just replace the "model.onnx" and "selected_tags.csv" files in the "wd-v1-4-vit-tagger-v2" folder with the ones you downloaded. I don't recommend this since it could lead to confusion on what model is actually being ran as well as overwriting the original tagging model, but if it's similar enough it should work okay.
 
 You can have each .bat send the tags to their own personal tag service if you'd like, just create a new tag service and change the .bat file to point to the new tag service. This might be useful if you want to delete wd-hydrus-tagger tags from furry files, or delete a tag service if/when a new, better tagging model for anime/furry art comes out so you can re-tag everything.
 
