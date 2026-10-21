@@ -258,7 +258,7 @@ def evaluate_api_batch(inputfile, token, cpu, model, threshold, host, tag_servic
         raise ValueError(f"Tag service '{tag_service}' not found")
 
     checkpoint_file = "session.log"
-    complete_marker = "hashes.batch.complete"
+    complete_marker = "session.complete"
     resuming = False
     already_done = set()
     hashes = []

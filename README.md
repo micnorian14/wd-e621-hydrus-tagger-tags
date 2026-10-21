@@ -13,7 +13,7 @@ The original requirements for this tool called for either python 3.9.x or 3.10.x
 
 ## FOR FIRST TIME INSTALLATION:
 1. Open the root folder (folder with this .md file) in cmd and run "python -m venv venv" without quotes
-2. Run start.bat in your command line to open the venv
+2. Run `start.bat` in your command line to open the venv
 3. Type "pip install -r requirements.txt" and press enter
 
 ## DOWNLOADING THE MODELS:
@@ -96,27 +96,27 @@ To enable GPU use for *wd-v3* SmilingWolf models, such as [wd-eva02-large-tagger
 - After you make sure that PATH variables are correct you can utilize your GPU for tagging. If you followed the initial preparation/setup steps correctly — refer to the instructions below on how to add different models. Once you edited your `.bat` to use `--cpu 0` it should automatically install latest onnxruntime-gpu to your venv on the first run.
 
 ## FOR NORMAL USE:
-1. Open command line in the root folder and type start.bat or double-click if the convenience change has been made
+1. Open command line in the root folder and type `start.bat` or double-click if the convenience change has been made
 2. With Hydrus OPEN:
 	- a. Copy a list of sha256 hashes from Hydrus (right click on file, navigate to share > copy > hash/hashes > sha256)
-	- b. Paste list into hashes.txt (the `sha256:` prefix is stripped automatically)
-3. Run run_wd_hashes.bat for general tagging, or run_e621_hashes.bat for furry art
-4. (optional) Run run_wd_ratings.bat to get ratings tags only, with no content tags
+	- b. Paste list into `hashes.txt` (the `sha256:` prefix is now ignored automatically)
+3. Run `run_wd_hashes.bat` for general tagging, or run_e621_hashes.bat for furry art
+4. (optional) Run `run_wd_ratings.bat` to get ratings tags only, with no content tags
 
 ### Processing by Tags (`--tags`)
 Alternatively, you can process files by Hydrus search tags instead of manually exporting hashes.
 1. Create a `tags.txt` file containing Hydrus search tags (one per line).
 2. Run the tool with the `--tags` flag and point it at `tags.txt` instead of `hashes.txt`.
 3. The tool will query Hydrus for all matching files and process them.
-	- Tags are ANDed together (a file must match all of them). System predicates such as `system:filetype is image` or `system:limit=500` work the same way they do in the Hydrus client. The original hashes.txt workflow still works if you omit the `--tags` flag.
+	- Tags are ANDed together (a file must match all of them). System predicates such as `system:filetype is image` or `system:limit=500` work the same way they do in the Hydrus client. The original `hashes.txt` workflow still works if you omit the `--tags` flag.
 	- Example `tags.txt`:
-		creator:some_artist
-		system:filetype is image
+		`creator:some_artist`
+		`system:filetype is image`
 
 ### Skipping already-tagged files (`--skip-tagged`)
 When you pass `--skip-tagged` together with `--tags`, the tool automatically adds a negative search term for the current model’s AI marker (for example `-wd eva02 large tagger v3 ai generated tags`). Hydrus excludes those files from the results, so the tool never receives, queues, or logs them. The marker is read from the selected model’s `info.json`, so it works for any model you have installed. A post-fetch check still exists as a fallback for hash-file mode.
 
-- The `--skip-tagged` flag only excludes files tagged by the model you are currently running. If you previously tagged files with a different model (for example `wd-v1-4-vit-tagger-v2`), those files carry a different marker and will not be skipped. To exclude them as well, add the inverse of the old marker to your tags.txt file: `-wd v1.4 vit tagger v2 ai generated tags`
+- The `--skip-tagged` flag only excludes files tagged by the model you are currently running. If you previously tagged files with a different model (for example `wd-v1-4-vit-tagger-v2`), those files carry a different marker and will not be skipped. To exclude them as well, add the inverse of the old marker to your `tags.txt` file: `-wd v1.4 vit tagger v2 ai generated tags`
 - You can find the exact marker string in the old model’s info.json (modelname field). Add one inverse line per model you want to skip.
 
 ### Stopping after N successful tags (`--limit`)
@@ -124,14 +124,15 @@ When you pass `--skip-tagged` together with `--tags`, the tool automatically add
 If you set `--limit N`, the tool stops after N files have been successfully tagged. Files that are skipped do not count toward that number.
 When `--limit` is set and your `tags.txt` does not already contain a `system:limit`, the tool adds one for you (`system:limit is N*20`). This keeps Hydrus from returning the entire database when you only want a small batch. If you already put a `system:limit` in `tags.txt`, that one is kept and no extra cap is added. To process everything, omit `--limit` and do not put a `system:limit` in `tags.txt`.
 
-### Checkpoint and resume
-Every instance writes two logs in the root folder:
-- `hashes.processed.log` — hashes that were successfully tagged
-- `hashes.skipped.log` — hashes that were skipped for a real reason (failed download, failed write, etc.), with a short explanation
+### session.log and resume function
+Every instance writes a session log in the root folder:
+- `session.log` contains a printout of the initialization debug lines so you can see exactly what step of initialization fails. Then it prints all the hashes that Hydrus reports can be processed. During processing: each hash is appended with a status like OK, FAILED, SKIPPED, UUNSUPPORTED, UNABLE TO DECODE, etc. On a clean exit (not a crash/termination) each hash that was successfully tagged OK has that status removed. This presents the bare SHA256 hash per line. Excellent for copy-and-pasting. Any hashes that were skipped for any reason (failed download, failed write, etc.), will still have that reason appended to them so you can troubleshoot those hashes. These are typically either corrupted files or files with an incorrect system:filetype tag. 
 
-A `hashes.batch.complete` marker is written only when a batch finishes cleanly. By default, if that marker is missing (crash, abort, or power loss), the next launch resumes from the checkpoint. Pass `--skip-resume` to force a fresh batch even if an unfinished checkpoint exists. The logs are left in place after the run so you can review them.
+### Resume (checkpoint) function
+Every instance checks for a `session.complete` file to determine if the last session exited cleanly or not. If not; it uses the `session.log` file as a checkpoint for resuming where the last hashes were marked with OK status. If it does find `session.complete` then it assumes the last session exited cleanly and will start a new `session.log` file. 
+- `--skip-resume` flag will ignore the checkpoint and start a fresh batch should you ever need it. 
 
-### hashes.txt accepts the sha256: prefix
+### `hashes.txt` accepts the sha256: prefix
  - If you paste hashes copied from Hydrus, they often arrive as `sha256:<hash>`. The tool now strips that prefix automatically, so you no longer need to remove it by hand. Plain hashes still work.
 
 ### Video and animated files
@@ -168,7 +169,7 @@ python -m wd-hydrus-tagger evaluate-api 123_your_files_hash_456
 ```bash
 python -m wd-hydrus-tagger evaluate-api-batch hashes.txt
 ```
-Where hashes.txt is a file containing one Hydrus file hash per line.
+Where `hashes.txt` is a file containing one Hydrus file hash per line.
 
 #### Options:
 ```
@@ -187,31 +188,31 @@ Where hashes.txt is a file containing one Hydrus file hash per line.
 
 ## RANDOM INFO:
 Everything has been confirmed to work on various Windows 10 installations. I've also read about other people getting everything (except GPU utilization) working on various linux distributions by changing the .bat files.
-If you do run into problems on other operating systems, the culprit is likely in interrogate.py, specifically where path() is invoked or it's something to do with the .bat files and how they're written.
+If you do run into problems on other operating systems, the culprit is likely in `interrogate.py`, specifically where path() is invoked or it's something to do with the .bat files and how they're written.
 
-run_e621_hashes.bat uses an e621 model that doesn't tag content ratings but should provide much more accurate tags for furry artwork. ...
-run_wd_ratings.bat runs the normal WD model which DOES tag ratings, but discards all tags except for the ratings.
-It's recommended to run run_wd_ratings.bat AFTER running run_e621_hashes.bat ...
-Note that this is UNNECESSARY if run_wd_hashes.bat is ran on the file FIRST ...
+`run_e621_hashes.bat` uses an e621 model that doesn't tag content ratings but should provide much more accurate tags for furry artwork. ...
+`run_wd_ratings.bat` runs the normal WD model which DOES tag ratings, but discards all tags except for the ratings.
+It's recommended to run `run_wd_ratings.bat` AFTER running `run_e621_hashes.bat` ...
+Note that this is UNNECESSARY if `run_wd_hashes.bat` is ran on the file FIRST ...
 
 All modules have been edited to automatically add an "ai generated tags" tag to the file thats specific to which tagger was run.
-All .bat files use evaluate-api-batch, meaning to check individual files you MUST use hashes.txt or enter the command yourself.
+All .bat files use evaluate-api-batch, meaning to check individual files you MUST use `hashes.txt` or enter the command yourself.
 
-If you don't need furry or rating tagging capability, simply delete run_e621_hashes.bat/run_wd_ratings.bat, as well as the Z3d-E621-Convnext folder
+If you don't need furry or rating tagging capability, simply delete `run_e621_hashes.bat`/`run_wd_ratings.bat`, as well as the Z3d-E621-Convnext folder
 
 My personal workflow is to have a hydrus search page that excludes all AI tags, filters to only PNG/JPG/WEBP images, and only images with less than 10 tags already (to avoid tagging already well-tagged files.) I also limit the results to around 2048 images, since that takes roughly an hour to process on my system.
-After tagging EVERYTHING with run_wd_hashes.bat, there will be some files that have been tagged with "furry" or "female furry".
-I then have another search page that collects all these newly identified furry files, and I run run_e621_hashes.bat on them after a sufficient amount is identified.
+After tagging EVERYTHING with `run_wd_hashes.bat`, there will be some files that have been tagged with "furry" or "female furry".
+I then have another search page that collects all these newly identified furry files, and I run `run_e621_hashes.bat` on them after a sufficient amount is identified.
 
 I personally don't understand the difference between the different ViT/Convnext/MOAT tagging models, and since ViT was the default included with the tool, it's what I've been using.
 
-If you prefer a different model for some reason, then just create a new folder in the /model/ folder, put your .onnx and .csv file in there, then copy and paste an info.json from another folder and edit it appropriately. Then you can edit or copy run_wd_hashes.bat and change the folder being pointed to from "wd-v1-4-vit-tagger-v2" to whatever you named your new folder. alternatively, you could just replace the "model.onnx" and "selected_tags.csv" files in the "wd-v1-4-vit-tagger-v2" folder with the ones you downloaded. I don't recommend this since it could lead to confusion on what model is actually being ran as well as overwriting the original tagging model, but if it's similar enough it should work okay.
+If you prefer a different model for some reason, then just create a new folder in the /model/ folder, put your .onnx and .csv file in there, then copy and paste an info.json from another folder and edit it appropriately. Then you can edit or copy `run_wd_hashes.bat` and change the folder being pointed to from "wd-v1-4-vit-tagger-v2" to whatever you named your new folder. alternatively, you could just replace the "model.onnx" and "selected_tags.csv" files in the "wd-v1-4-vit-tagger-v2" folder with the ones you downloaded. I don't recommend this since it could lead to confusion on what model is actually being ran as well as overwriting the original tagging model, but if it's similar enough it should work okay.
 
 You can have each .bat send the tags to their own personal tag service if you'd like, just create a new tag service and change the .bat file to point to the new tag service. This might be useful if you want to delete wd-hydrus-tagger tags from furry files, or delete a tag service if/when a new, better tagging model for anime/furry art comes out so you can re-tag everything.
 
 As of the latest version of this tagging tool, the way that the "ai generated tags" tags are made is different, meaning they very likely wont match the tags given to already processed files. I recommend sibling-ing the previous tag to the newly created one, or vice versa.
 
-Python 3.12 seems to have severely broken some of the dependencies used by this tool. Perhaps with enough fiddling and changing required package versions it might work, but it's much easier to just use python 3.11. python 3.10 might also work, but I believe the latest version of onnxruntime as well as a couple other packages that were updated require atleast python 3.11.
+Python 3.12 seems to have broken some of the dependencies used by this tool. Perhaps with enough fiddling and changing required package versions it might work, but it's much easier to just use python 3.11. python 3.10 might also work, but I believe the latest version of onnxruntime as well as a couple other packages that were updated require atleast python 3.11.
 
 I tested and confirmed that cuDNN 8.9.7 also works without issue, however as the onnxruntime documentation specifically calls for cuDNN 8.9.2, it's what i've listed in the setup instructions.
 
